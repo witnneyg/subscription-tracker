@@ -83,7 +83,7 @@ const subscriptionSchema = new Schema<ISubscription>(
   },
 );
 
-subscriptionSchema.pre("save", function (next: any) {
+subscriptionSchema.pre("save", function () {
   if (!this.renewalDate) {
     const renewalDate = new Date(this.startDate);
 
@@ -91,21 +91,17 @@ subscriptionSchema.pre("save", function (next: any) {
       case "daily":
         renewalDate.setDate(renewalDate.getDate() + 1);
         break;
-
       case "weekly":
         renewalDate.setDate(renewalDate.getDate() + 7);
         break;
-
       case "monthly":
         renewalDate.setMonth(renewalDate.getMonth() + 1);
         break;
-
       case "yearly":
         renewalDate.setFullYear(renewalDate.getFullYear() + 1);
         break;
-
       default:
-        return next(new Error("Invalid frequency"));
+        throw new Error("Invalid frequency");
     }
 
     this.renewalDate = renewalDate;
@@ -114,8 +110,6 @@ subscriptionSchema.pre("save", function (next: any) {
   if (this.renewalDate < new Date()) {
     this.status = "expired";
   }
-
-  next();
 });
 const Subscription = model<ISubscription>("Subscription", subscriptionSchema);
 
