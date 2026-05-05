@@ -14,7 +14,7 @@ export async function createSubscription(req: Request | any, res: Response) {
     });
 
     const { workflowRunId } = await workFlowClient.trigger({
-      url: "http://127.0.0.1:8080/workflows/subscription/reminder",
+      url: "https://tipping-skinning-crisply.ngrok-free.dev/workflows/subscription/reminder",
       body: {
         subscriptionId: subscription.id,
       },
