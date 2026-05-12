@@ -9,7 +9,7 @@ const subscriptionRouter = Router();
 subscriptionRouter.get("/:id", authMiddleware, getSubscription);
 subscriptionRouter.get("/", getAllSubscription);
 subscriptionRouter.post("/", authMiddleware, createSubscription);
-// subscriptionRouter.put("/", updateSubscription)
-// subscriptionRouter.delete("/", deleteSubscription)
+// subscriptionRouter.put("/:id", authMiddleware, updateSubscription);
+// subscriptionRouter.delete("/:id", authMiddleware, deleteSubscription)
 
 export default subscriptionRouter;

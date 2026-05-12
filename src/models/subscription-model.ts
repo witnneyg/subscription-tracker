@@ -1,46 +1,26 @@
-import { Schema, model, Types } from "mongoose";
+import mongoose, { Schema, model, Types } from "mongoose";
 
 export interface ISubscription {
-  name: string;
-  price: number;
-  currency: string;
-  frequency: "daily" | "weekly" | "monthly" | "yearly";
-  category: "entertainment" | "health" | "education" | "finance" | "other";
+  plan: Types.ObjectId;
+  user: Types.ObjectId;
+
   paymentMethod: string;
+  priceAtSubscription?: number;
+
   status: "active" | "cancelled" | "expired";
+
   startDate: Date;
   renewalDate: Date;
-  user: Types.ObjectId;
+
+  nextPlan?: Types.ObjectId;
 }
 
 const subscriptionSchema = new Schema<ISubscription>(
   {
-    name: {
-      type: String,
-      required: [true, "Subscription name is required"],
-      trim: true,
-      maxlength: [100, "Name cannot exceed 100 characters"],
-    },
-    price: {
-      type: Number,
-      required: [true, "Price is required"],
-      min: [0, "Price must be a positive number"],
-    },
-    currency: {
-      type: String,
-      enum: ["USD", "EUR", "BRL", "GBP"],
-      default: "BRL",
-      uppercase: true,
-    },
-    frequency: {
-      type: String,
-      enum: ["daily", "weekly", "monthly", "yearly"],
-      required: true,
-    },
-    category: {
-      type: String,
-      enum: ["entertainment", "health", "education", "finance", "other"],
-      required: true,
+    plan: {
+      type: Schema.Types.ObjectId,
+      ref: "Plan",
+      required: [true, "Plan is required"],
     },
     paymentMethod: {
       type: String,
@@ -71,11 +51,18 @@ const subscriptionSchema = new Schema<ISubscription>(
         message: "Renewal date must be after the start date",
       },
     },
+    priceAtSubscription: {
+      type: Number,
+    },
     user: {
       type: Schema.Types.ObjectId,
       ref: "User",
       required: [true, "User is required"],
       index: true,
+    },
+    nextPlan: {
+      type: Schema.Types.ObjectId,
+      ref: "Plan",
     },
   },
   {
@@ -83,34 +70,45 @@ const subscriptionSchema = new Schema<ISubscription>(
   },
 );
 
-subscriptionSchema.pre("save", function () {
+subscriptionSchema.pre("save", async function () {
+  let plan = null;
+
+  if (!this.priceAtSubscription || !this.renewalDate) {
+    plan = await mongoose.model("Plan").findById(this.plan);
+
+    if (!plan) {
+      throw new Error("Plan not found");
+    }
+  }
+
+  if (!this.priceAtSubscription) {
+    this.priceAtSubscription = plan.price;
+  }
+
   if (!this.renewalDate) {
+    const renewalPeriods: Record<string, number> = {
+      weekly: 7,
+      monthly: 1,
+      quarterly: 3,
+      yearly: 12,
+    };
+
     const renewalDate = new Date(this.startDate);
 
-    switch (this.frequency) {
-      case "daily":
-        renewalDate.setDate(renewalDate.getDate() + 1);
-        break;
-      case "weekly":
-        renewalDate.setDate(renewalDate.getDate() + 7);
-        break;
-      case "monthly":
-        renewalDate.setMonth(renewalDate.getMonth() + 1);
-        break;
-      case "yearly":
-        renewalDate.setFullYear(renewalDate.getFullYear() + 1);
-        break;
-      default:
-        throw new Error("Invalid frequency");
+    if (plan.frequency === "weekly") {
+      renewalDate.setDate(
+        renewalDate.getDate() + renewalPeriods[plan.frequency],
+      );
+    } else {
+      renewalDate.setMonth(
+        renewalDate.getMonth() + renewalPeriods[plan.frequency],
+      );
     }
 
     this.renewalDate = renewalDate;
   }
-
-  if (this.renewalDate < new Date()) {
-    this.status = "expired";
-  }
 });
+
 const Subscription = model<ISubscription>("Subscription", subscriptionSchema);
 
 export default Subscription;

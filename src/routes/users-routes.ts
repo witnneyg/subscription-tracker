@@ -13,6 +13,6 @@ userRouter.get("/:id", authMiddleware, GetUser);
 
 userRouter.delete("/:id", DeleteUser);
 
-userRouter.put("/:id", UpdateUser);
+// userRouter.put("/:id", UpdateUser); // implementar dps
 
 export default userRouter;
