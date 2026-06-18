@@ -7,6 +7,12 @@ interface ExpandedProduct {
   description: string | null;
 }
 
+interface ExpandedProduct {
+  name: string;
+  description: string | null;
+  active: boolean; // Adicionado para checar se o produto foi arquivado
+}
+
 const stripeRouter = Router();
 
 stripeRouter.post(
@@ -18,7 +24,7 @@ stripeRouter.post(
         payment_method_types: ["card"],
         line_items: [
           {
-            price: "price_1TikNzRppJDGpb056T0kPfUm",
+            price: req.body.planId,
             quantity: 1,
           },
         ],
@@ -34,7 +40,6 @@ stripeRouter.post(
     }
   },
 );
-
 stripeRouter.get(
   "/plans",
   async (req: Request, res: Response): Promise<void> => {
@@ -44,17 +49,22 @@ stripeRouter.get(
         expand: ["data.product"],
       });
 
-      const plans = prices.data.map((price) => {
-        const product = price.product as unknown as ExpandedProduct;
+      const plans = prices.data
+        .filter((price) => {
+          const product = price.product as unknown as ExpandedProduct;
+          return product && product.active === true;
+        })
+        .map((price) => {
+          const product = price.product as unknown as ExpandedProduct;
 
-        return {
-          stripePriceId: price.id,
-          name: product.name,
-          description: product.description || "",
-          price: price.unit_amount ? price.unit_amount / 100 : 0,
-          frequency: price.recurring?.interval || "monthly",
-        };
-      });
+          return {
+            stripePriceId: price.id,
+            name: product.name,
+            description: product.description || "",
+            price: price.unit_amount ? price.unit_amount / 100 : 0,
+            frequency: price.recurring?.interval || "monthly",
+          };
+        });
 
       res.json(plans);
     } catch (error: any) {
